@@ -4,14 +4,13 @@ import json
 
 BUY_INS = 30
 BB_PER_BUYIN = 100
-SB_PER_BB = 2
+FILENAME = 'state.json'
 
 
 class Manager(object):
 
-	def __init__(self, filename):
-		self.filename = filename + '.json'
-		with open(self.filename) as file:
+	def __init__(self):
+		with open(FILENAME) as file:
 			self.state = json.loads(file.read())
 		for account in self.state['accounts'].values():
 			balance = decimal.Decimal(account['balance'])
@@ -33,7 +32,7 @@ class Manager(object):
 	def save(self):
 		account_json = json.dumps(self.state, sort_keys=True,
 		                          indent='\t', cls=DecimalEncoder)
-		with open(self.filename, 'w') as file:
+		with open(FILENAME, 'w') as file:
 			file.write(account_json)
 
 	def transaction(self, name, value):
@@ -49,14 +48,14 @@ class Manager(object):
 
 	def balance(self, name):
 		account = self.state['accounts'][name]
-		return '{}{}'.format(account['currency'], account['balance'])
+		return '{}{:,}'.format(account['currency'], account['balance'])
 
 	def stakes(self, name):
 		account = self.state['accounts'][name]
-		sb = cent(account['balance'] / BUY_INS / BB_PER_BUYIN / SB_PER_BB)
-		bb = sb * SB_PER_BB
+		sb = cent(account['balance'] / BUY_INS / BB_PER_BUYIN / 2)
+		bb = sb * 2
 		buy_in = bb * BB_PER_BUYIN
-		return '{0}{1} / {0}{2} / {0}{3}'.format(
+		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
 			account['currency'], sb, bb, buy_in)
 
 

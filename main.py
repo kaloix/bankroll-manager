@@ -25,7 +25,7 @@ class Application(tk.Frame):
 		self.widget = dict()
 		self.label = dict()
 		self.row = int()
-		self.manager = account.Manager('bankroll')
+		self.manager = account.Manager()
 		self.createWidgets()
 		self.load(self.manager.selected)
 
