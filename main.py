@@ -11,7 +11,7 @@ import account
 def main():
 	root = tk.Tk()
 	root.wm_title('Poker Bankroll Manager')
-	font = tkf.nametofont("TkDefaultFont")
+	font = tkf.nametofont('TkDefaultFont')
 	font.configure(size=11)
 	app = Application(root)
 	app.mainloop()
@@ -21,7 +21,7 @@ class Application(tk.Frame):
 
 	def __init__(self, master):
 		tk.Frame.__init__(self, master)
-		self.pack(fill='both')
+		self.pack(padx=10, pady=10)
 		self.widget = dict()
 		self.label = dict()
 		self.row = int()
@@ -80,8 +80,8 @@ class Application(tk.Frame):
 
 	def add_element(self, text, elem):
 		l = tk.Label(self, text=text+':')
-		l.grid(row=self.row, column=0, sticky='W', padx=5)
-		elem.grid(row=self.row, column=1, sticky='W', padx=5)
+		l.grid(row=self.row, column=0, sticky='E', padx=5, pady=5)
+		elem.grid(row=self.row, column=1, sticky='W', padx=5, pady=5)
 		self.row += 1
 		self.widget[text] = elem
 
