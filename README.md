@@ -1,1 +1,2 @@
-# bankroll-manager
+# Poker Bankroll Manager
+![screenshot](screenshot.png)
