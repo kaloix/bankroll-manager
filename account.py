@@ -1,3 +1,5 @@
+import csv
+import datetime
 import decimal
 import json
 import os
@@ -10,8 +12,8 @@ BB_PER_BUYIN = 100
 class Manager(object):
 
 	def __init__(self):
-		path = os.path.dirname(os.path.realpath(__file__))
-		self.filename = os.path.join(path, 'state.json')
+		self.path = os.path.dirname(os.path.realpath(__file__))
+		self.filename = os.path.join(self.path, 'state.json')
 		with open(self.filename) as file:
 			state = json.loads(file.read())
 		self.accounts = dict()
@@ -30,23 +32,25 @@ class Manager(object):
 	@selected.setter
 	def selected(self, name):
 		self._selected = name
-		self._save()
+		self._save_state()
 
 	def transaction(self, name, value):
 		self.accounts[name].transaction(value)
-		self._save()
+		self._save_state()
+		self._save_balance(name, self.accounts[name].balance)
 
 	def balance(self, name):
-		return self.accounts[name].balance
+		return str(self.accounts[name])
 
 	def set_balance(self, name, value):
 		self.accounts[name].balance = value
-		self._save()
+		self._save_state()
+		self._save_balance(name, self.accounts[name].balance)
 
 	def stakes(self, name):
 		return self.accounts[name].stakes
 
-	def _save(self):
+	def _save_state(self):
 		accounts = {name: account.dictionary
 		            for name, account in self.accounts.items()}
 		state = {
@@ -56,6 +60,15 @@ class Manager(object):
 		with open(self.filename, 'w') as file:
 			file.write(account_json)
 
+	def _save_balance(self, name, value):
+		now = datetime.datetime.now(tz=datetime.timezone.utc)
+		now = now.replace(microsecond=0)
+		row = now.isoformat(), value
+		filename = os.path.join(self.path, name+'.csv')
+		with open(filename, 'a') as file:
+			writer = csv.writer(file)
+			writer.writerow(row)
+
 
 class Account(object):
 
@@ -64,16 +77,12 @@ class Account(object):
 		self.precision = precision
 		self._balance = self._cent(decimal.Decimal(balance))
 
-	@property
-	def dictionary(self):
-		return {
-			'currency': self.currency,
-			'balance': str(self._balance),
-			'precision': self.precision}
+	def __str__(self):
+		return '{}{:,}'.format(self.currency, self._balance)
 
 	@property
 	def balance(self):
-		return '{}{:,}'.format(self.currency, self._balance)
+		return str(self._balance)
 
 	@balance.setter
 	def balance(self, value):
@@ -86,6 +95,13 @@ class Account(object):
 		buy_in = bb * BB_PER_BUYIN
 		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
 			self.currency, sb, bb, buy_in)
+
+	@property
+	def dictionary(self):
+		return {
+			'currency': self.currency,
+			'balance': str(self._balance),
+			'precision': self.precision}
 
 	def transaction(self, value):
 		self._balance += self._parse(value)

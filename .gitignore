@@ -1,4 +1,5 @@
 *~
+*.csv
 __pycache__
 state.json
 test.py
