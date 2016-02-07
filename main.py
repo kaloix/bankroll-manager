@@ -11,8 +11,6 @@ import account
 def main():
 	root = tk.Tk()
 	root.wm_title('Poker Bankroll Manager')
-	font = tkf.nametofont('TkDefaultFont')
-	font.configure(size=11)
 	app = Application(root)
 	app.mainloop()
 
@@ -21,6 +19,8 @@ class Application(tk.Frame):
 
 	def __init__(self, master):
 		tk.Frame.__init__(self, master)
+		self.font = tkf.nametofont('TkDefaultFont')
+		self.font.configure(size=11)
 		self.pack(padx=10, pady=10)
 		self.widget = dict()
 		self.label = dict()
@@ -35,6 +35,7 @@ class Application(tk.Frame):
 		self.add_label('Balance')
 		self.add_label('Stakes')
 		self.add_entry('Transaction', self.transaction)
+		self.add_entry('New Balance', self.set_balance)
 
 	def load(self, account):
 		self.set_label('Account', account)
@@ -44,15 +45,26 @@ class Application(tk.Frame):
 		self.set_label('Stakes', stakes)
 		self.manager.selected = account
 
-	def transaction(self, event):
+	def transaction(self, _):
 		account = self.get_label('Account')
 		value = self.get_label('Transaction')
 		try:
-			new_value = self.manager.transaction(account, value)
+			self.manager.transaction(account, value)
 		except ValueError as err:
 			logging.warning('{}: {}'.format(type(err).__name__, err))
 			return
 		self.set_label('Transaction', '')
+		self.load(account)
+
+	def set_balance(self, _):
+		account = self.get_label('Account')
+		value = self.get_label('New Balance')
+		try:
+			self.manager.set_balance(account, value)
+		except ValueError as err:
+			logging.warning('{}: {}'.format(type(err).__name__, err))
+			return
+		self.set_label('New Balance', '')
 		self.load(account)
 
 	def add_label(self, text):
@@ -62,13 +74,14 @@ class Application(tk.Frame):
 
 	def add_entry(self, text, cmd):
 		self.label[text] = tk.StringVar()
-		e = tk.Entry(self, textvariable=self.label[text])
+		e = tk.Entry(self, textvariable=self.label[text], font=self.font)
 		e.bind('<Return>', cmd)
 		self.add_element(text, e)
 
 	def add_dropdown(self, text):
 		self.label[text] = tk.StringVar()
 		o = tk.OptionMenu(self, self.label[text], ' ')
+		o['menu'].config(font=self.font)
 		self.add_element(text, o)
 
 	def set_options(self, key, choices, cmd):

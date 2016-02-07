@@ -21,7 +21,7 @@ class Manager(object):
 
 	@property
 	def listing(self):
-		return list(self.accounts)
+		return sorted(list(self.accounts))
 
 	@property
 	def selected(self):
@@ -30,28 +30,31 @@ class Manager(object):
 	@selected.setter
 	def selected(self, name):
 		self._selected = name
-		self.save()
+		self._save()
 
-	def save(self):
+	def transaction(self, name, value):
+		self.accounts[name].transaction(value)
+		self._save()
+
+	def balance(self, name):
+		return self.accounts[name].balance
+
+	def set_balance(self, name, value):
+		self.accounts[name].balance = value
+		self._save()
+
+	def stakes(self, name):
+		return self.accounts[name].stakes
+
+	def _save(self):
 		accounts = {name: account.dictionary
 		            for name, account in self.accounts.items()}
 		state = {
 			'accounts': accounts,
 			'selected': self.selected}
-		account_json = json.dumps(state, sort_keys=True, indent='\t',
-		                          cls=DecimalEncoder)
+		account_json = json.dumps(state, sort_keys=True, indent='\t')
 		with open(self.filename, 'w') as file:
 			file.write(account_json)
-
-	def transaction(self, name, value):
-		self.accounts[name].transaction(value)
-		self.save()
-
-	def balance(self, name):
-		return self.accounts[name].balance
-
-	def stakes(self, name):
-		return self.accounts[name].stakes
 
 
 class Account(object):
@@ -59,7 +62,7 @@ class Account(object):
 	def __init__(self, currency, balance, precision):
 		self.currency = currency
 		self.precision = precision
-		self._balance = self.cent(decimal.Decimal(balance))
+		self._balance = self._cent(decimal.Decimal(balance))
 
 	@property
 	def dictionary(self):
@@ -72,32 +75,31 @@ class Account(object):
 	def balance(self):
 		return '{}{:,}'.format(self.currency, self._balance)
 
+	@balance.setter
+	def balance(self, value):
+		self._balance = self._parse(value)
+
 	@property
 	def stakes(self):
-		sb = self.cent(self._balance / BUY_INS / BB_PER_BUYIN / 2)
+		sb = self._cent(self._balance / BUY_INS / BB_PER_BUYIN / 2)
 		bb = sb * 2
 		buy_in = bb * BB_PER_BUYIN
 		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
 			self.currency, sb, bb, buy_in)
 
 	def transaction(self, value):
+		self._balance += self._parse(value)
+
+	def _cent(self, value):
+		exp = decimal.Decimal(str(10 ** -self.precision))
+		return value.quantize(exp, rounding=decimal.ROUND_DOWN)
+
+	def _parse(self, value):
 		try:
 			value = decimal.Decimal(value)
 		except decimal.InvalidOperation as err:
 			raise ValueError('parsing error') from err
-		additum = self.cent(value)
-		if additum != value:
+		rounded = self._cent(value)
+		if rounded != value:
 			raise ValueError('precision too high')
-		self._balance += additum
-
-	def cent(self, value):
-		exp = decimal.Decimal(str(10 ** -self.precision))
-		return value.quantize(exp, rounding=decimal.ROUND_DOWN)
-
-
-class DecimalEncoder(json.JSONEncoder):
-
-	def default(self, obj):
-		if isinstance(obj, decimal.Decimal):
-			return str(obj)
-		return json.JSONEncoder.default(self, obj)
+		return rounded
