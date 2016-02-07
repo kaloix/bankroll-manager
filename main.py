@@ -9,6 +9,8 @@ import account
 
 
 def main():
+	logging.basicConfig(format='[%(levelname)s] %(message)s',
+	                    level=logging.DEBUG)
 	root = tk.Tk()
 	root.wm_title('Poker Bankroll Manager')
 	app = Application(root)
@@ -27,45 +29,60 @@ class Application(tk.Frame):
 		self.row = int()
 		self.manager = account.Manager()
 		self.createWidgets()
-		self.load(self.manager.selected)
+		self.load()
 
 	def createWidgets(self):
 		self.add_dropdown('Account')
-		self.set_options('Account', self.manager.listing, self.load)
+		self.set_options('Account', self.manager.listing, self.select)
 		self.add_label('Balance')
 		self.add_label('Stakes')
 		self.add_entry('Transaction', self.transaction)
 		self.add_entry('New Balance', self.set_balance)
+		self.add_label('Last Hour')
+		self.add_label('Last Day')
+		self.add_label('Last Week')
+		self.add_label('Last Month')
+		self.add_label('Last Year')
 
-	def load(self, account):
-		self.set_label('Account', account)
-		balance = self.manager.balance(account)
-		self.set_label('Balance', balance)
-		stakes = self.manager.stakes(account)
-		self.set_label('Stakes', stakes)
+	def select(self, account):
 		self.manager.selected = account
+		self.load()
+
+	def load(self):
+		account = self.manager.selected
+		self.set_label('Account', account)
+		self.set_label('Balance', self.manager.balance)
+		self.set_label('Stakes', self.manager.stakes)
+		def last(period):
+			key = 'Last ' + period.capitalize()
+			change = self.manager.change(period)
+			color = 'dark red' if change.startswith('–') else 'dark green'
+			self.set_label(key, change, color)
+		last('hour')
+		last('day')
+		last('week')
+		last('month')
+		last('year')
 
 	def transaction(self, _):
-		account = self.get_label('Account')
 		value = self.get_label('Transaction')
 		try:
-			self.manager.transaction(account, value)
+			self.manager.transaction(value)
 		except ValueError as err:
 			logging.warning('{}: {}'.format(type(err).__name__, err))
 			return
 		self.set_label('Transaction', '')
-		self.load(account)
+		self.load()
 
 	def set_balance(self, _):
-		account = self.get_label('Account')
 		value = self.get_label('New Balance')
 		try:
-			self.manager.set_balance(account, value)
+			self.manager.balance = value
 		except ValueError as err:
 			logging.warning('{}: {}'.format(type(err).__name__, err))
 			return
 		self.set_label('New Balance', '')
-		self.load(account)
+		self.load()
 
 	def add_label(self, text):
 		self.label[text] = tk.StringVar()
@@ -98,8 +115,10 @@ class Application(tk.Frame):
 		self.row += 1
 		self.widget[text] = elem
 
-	def set_label(self, key, new):
+	def set_label(self, key, new, color=None):
 		self.label[key].set(new)
+		if color:
+			self.widget[key]['foreground'] = color
 
 	def get_label(self, key):
 		return self.label[key].get()

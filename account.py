@@ -1,8 +1,10 @@
+from contextlib import suppress
 import csv
-import datetime
+import datetime as dt
 import decimal
 import json
-import os
+import logging
+import os.path
 
 
 BUY_INS = 30
@@ -18,7 +20,7 @@ class Manager(object):
 			state = json.loads(file.read())
 		self.accounts = dict()
 		for name, attr in state['accounts'].items():
-			self.accounts[name] = Account(**attr)
+			self.accounts[name] = Account(name=name, **attr)
 		self._selected = state['selected']
 
 	@property
@@ -32,26 +34,44 @@ class Manager(object):
 	@selected.setter
 	def selected(self, name):
 		self._selected = name
-		self._save_state()
+		self._save()
 
-	def transaction(self, name, value):
-		self.accounts[name].transaction(value)
-		self._save_state()
-		self._save_balance(name, self.accounts[name].balance)
+	@property
+	def balance(self):
+		account = self.accounts[self._selected]
+		return str(account)
 
-	def balance(self, name):
-		return str(self.accounts[name])
+	@balance.setter
+	def balance(self, value):
+		account = self.accounts[self._selected]
+		account.balance = value
+		self._save()
 
-	def set_balance(self, name, value):
-		self.accounts[name].balance = value
-		self._save_state()
-		self._save_balance(name, self.accounts[name].balance)
+	@property
+	def stakes(self):
+		account = self.accounts[self._selected]
+		return account.stakes
 
-	def stakes(self, name):
-		return self.accounts[name].stakes
+	def transaction(self, value):
+		account = self.accounts[self._selected]
+		account.transaction(value)
+		self._save()
 
-	def _save_state(self):
-		accounts = {name: account.dictionary
+	def change(self, period):
+		account = self.accounts[self._selected]
+		if period == 'hour':
+			return account.change(dt.timedelta(hours=1))
+		if period == 'day':
+			return account.change(dt.timedelta(days=1))
+		if period == 'week':
+			return account.change(dt.timedelta(days=7))
+		if period == 'month':
+			return account.change(dt.timedelta(days=30.44))
+		if period == 'year':
+			return account.change(dt.timedelta(days=365.2))
+
+	def _save(self):
+		accounts = {name: account.state
 		            for name, account in self.accounts.items()}
 		state = {
 			'accounts': accounts,
@@ -60,22 +80,25 @@ class Manager(object):
 		with open(self.filename, 'w') as file:
 			file.write(account_json)
 
-	def _save_balance(self, name, value):
-		now = datetime.datetime.now(tz=datetime.timezone.utc)
-		now = now.replace(microsecond=0)
-		row = now.isoformat(), value
-		filename = os.path.join(self.path, name+'.csv')
-		with open(filename, 'a') as file:
-			writer = csv.writer(file)
-			writer.writerow(row)
-
 
 class Account(object):
 
-	def __init__(self, currency, balance, precision):
+	def __init__(self, name, currency, balance, precision):
+		self.name = name
 		self.currency = currency
 		self.precision = precision
 		self._balance = self._cent(decimal.Decimal(balance))
+		self.history = list()
+		self.filename = self.name + '.csv'
+		with suppress(FileNotFoundError), \
+				open(self.filename, newline='') as file:
+			reader = csv.reader(file)
+			for isotime, value in reader:
+				timestamp = dt.datetime.strptime(
+					isotime[::-1].replace(':', '', 1)[::-1],
+					'%Y-%m-%dT%H:%M:%S%z')
+				balance = self._cent(decimal.Decimal(value))
+				self.history.append((timestamp, balance))
 
 	def __str__(self):
 		return '{}{:,}'.format(self.currency, self._balance)
@@ -86,7 +109,9 @@ class Account(object):
 
 	@balance.setter
 	def balance(self, value):
+		logging.info('{}: new balance {}'.format(self.name, value))
 		self._balance = self._parse(value)
+		self._save(self._balance)
 
 	@property
 	def stakes(self):
@@ -97,14 +122,37 @@ class Account(object):
 			self.currency, sb, bb, buy_in)
 
 	@property
-	def dictionary(self):
+	def state(self):
 		return {
 			'currency': self.currency,
 			'balance': str(self._balance),
 			'precision': self.precision}
 
 	def transaction(self, value):
+		logging.info('{}: transaction {}'.format(self.name, value))
 		self._balance += self._parse(value)
+		self._save(self._balance)
+
+	def change(self, timedelta):
+		start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
+		for timestamp, value in reversed(self.history):
+			balance = value
+			if timestamp < start:
+				break
+		else:
+			balance = decimal.Decimal()
+		result = self._balance - balance
+		sign = '–' if result.is_signed() else '+'
+		return '{} {}{:,}'.format(sign, self.currency, abs(result))
+
+	def _save(self, balance):
+		now = dt.datetime.now(tz=dt.timezone.utc)
+		now = now.replace(microsecond=0)
+		self.history.append((now, balance))
+		row = now.isoformat(), str(balance)
+		with open(self.filename, 'a', newline='') as file:
+			writer = csv.writer(file)
+			writer.writerow(row)
 
 	def _cent(self, value):
 		exp = decimal.Decimal(str(10 ** -self.precision))
