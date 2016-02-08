@@ -2,6 +2,7 @@
 
 import functools
 import logging
+import os.path
 import tkinter as tk
 import tkinter.font as tkf
 
@@ -11,8 +12,11 @@ import account
 def main():
 	logging.basicConfig(format='[%(levelname)s] %(message)s',
 	                    level=logging.DEBUG)
-	root = tk.Tk()
-	root.wm_title('Poker Bankroll Manager')
+	root = tk.Tk(className='Bankroll')
+	root.title('Poker Bankroll Manager')
+	path = os.path.dirname(os.path.realpath(__file__))
+	img = tk.PhotoImage(file=os.path.join(path, 'icon.png'))
+	root.tk.call('wm', 'iconphoto', root._w, img)
 	app = Application(root)
 	app.mainloop()
 
@@ -56,7 +60,12 @@ class Application(tk.Frame):
 		for period in ['hour', 'day', 'week', 'month', 'year']:
 			key = 'Last ' + period.capitalize()
 			change = self.manager.change(period)
-			color = 'dark red' if change.startswith('–') else 'dark green'
+			if change[0] == '+':
+				color = 'dark green'
+			elif change[0] == '–':
+				color = 'dark red'
+			else:
+				color = 'black'
 			self.set_label(key, change, color)
 
 	def transaction(self, _):

@@ -147,8 +147,8 @@ class Account(object):
 			percent = ' ({:.2f}%)'.format(abs(percent))
 		else:
 			percent = str()
-		sign = '–' if delta.is_signed() else '+'
-		return '{} {}{:,}{}'.format(sign, self.currency, abs(delta), percent)
+		sign = '' if not delta else '– ' if delta.is_signed() else '+ '
+		return '{}{}{:,}{}'.format(sign, self.currency, abs(delta), percent)
 
 	def _save(self, balance):
 		now = dt.datetime.now(tz=dt.timezone.utc)
