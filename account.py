@@ -7,15 +7,15 @@ import logging
 import os.path
 
 
-BUY_INS = 30
 BB_PER_BUYIN = 100
+BUY_INS = 30
+PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class Manager(object):
 
 	def __init__(self):
-		self.path = os.path.dirname(os.path.realpath(__file__))
-		self.filename = os.path.join(self.path, 'state.json')
+		self.filename = os.path.join(PATH, 'state.json')
 		with open(self.filename) as file:
 			state = json.loads(file.read())
 		self.accounts = dict()
@@ -89,7 +89,7 @@ class Account(object):
 		self.precision = precision
 		self._balance = self._cent(decimal.Decimal(balance))
 		self.history = list()
-		self.filename = self.name + '.csv'
+		self.filename = os.path.join(PATH, self.name+'.csv')
 		with suppress(FileNotFoundError), \
 				open(self.filename, newline='') as file:
 			reader = csv.reader(file)
@@ -136,14 +136,19 @@ class Account(object):
 	def change(self, timedelta):
 		start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
 		for timestamp, value in reversed(self.history):
-			balance = value
+			before = value
 			if timestamp < start:
 				break
 		else:
-			balance = decimal.Decimal()
-		result = self._balance - balance
-		sign = '–' if result.is_signed() else '+'
-		return '{} {}{:,}'.format(sign, self.currency, abs(result))
+			before = decimal.Decimal()
+		delta = self._balance - before
+		if before and delta:
+			percent = 100 * float(delta) / float(before)
+			percent = ' ({:.2f}%)'.format(abs(percent))
+		else:
+			percent = str()
+		sign = '–' if delta.is_signed() else '+'
+		return '{} {}{:,}{}'.format(sign, self.currency, abs(delta), percent)
 
 	def _save(self, balance):
 		now = dt.datetime.now(tz=dt.timezone.utc)

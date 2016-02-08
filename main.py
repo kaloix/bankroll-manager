@@ -53,16 +53,11 @@ class Application(tk.Frame):
 		self.set_label('Account', account)
 		self.set_label('Balance', self.manager.balance)
 		self.set_label('Stakes', self.manager.stakes)
-		def last(period):
+		for period in ['hour', 'day', 'week', 'month', 'year']:
 			key = 'Last ' + period.capitalize()
 			change = self.manager.change(period)
 			color = 'dark red' if change.startswith('–') else 'dark green'
 			self.set_label(key, change, color)
-		last('hour')
-		last('day')
-		last('week')
-		last('month')
-		last('year')
 
 	def transaction(self, _):
 		value = self.get_label('Transaction')
