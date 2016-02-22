@@ -139,8 +139,6 @@ class Account(object):
 			before = value
 			if timestamp < start:
 				break
-		else:
-			before = decimal.Decimal()
 		delta = self._balance - before
 		if before and delta:
 			percent = 100 * float(delta) / float(before)
