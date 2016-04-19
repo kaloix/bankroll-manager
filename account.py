@@ -9,7 +9,6 @@ import os.path
 
 
 BB_PER_BUYIN = 100
-BUY_INS = 30
 PATH = os.path.dirname(os.path.realpath(__file__))
 
 Record = namedtuple('Record', ['timestamp', 'balance'])
@@ -86,10 +85,11 @@ class Manager(object):
 
 class Account(object):
 
-	def __init__(self, name, currency, precision):
+	def __init__(self, name, currency, precision, buy_ins):
 		self.name = name
 		self.currency = currency
 		self.precision = precision
+		self.buy_ins = buy_ins
 		self.history = list()
 		self.filename = os.path.join(PATH, self.name+'.csv')
 		with suppress(FileNotFoundError), \
@@ -117,7 +117,8 @@ class Account(object):
 
 	@property
 	def stakes(self):
-		sb = self._cent(self.history[-1].balance / BUY_INS / BB_PER_BUYIN / 2)
+		sb = self._cent(self.history[-1].balance / self.buy_ins /
+		                BB_PER_BUYIN / 2)
 		bb = sb * 2
 		buy_in = bb * BB_PER_BUYIN
 		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
@@ -127,7 +128,8 @@ class Account(object):
 	def state(self):
 		return {
 			'currency': self.currency,
-			'precision': self.precision}
+			'precision': self.precision,
+			'buy_ins': self.buy_ins}
 
 	def transaction(self, value):
 		logging.info('{}: transaction {}'.format(self.name, value))
@@ -143,7 +145,7 @@ class Account(object):
 		delta = self.history[-1].balance - before
 		if before and delta:
 			percent = 100 * float(delta) / float(before)
-			percent = ' ({:.2f}%)'.format(abs(percent))
+			percent = ' ({:.0f}%)'.format(abs(percent))
 		else:
 			percent = str()
 		sign = '' if not delta else '– ' if delta.is_signed() else '+ '
