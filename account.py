@@ -1,3 +1,4 @@
+from collections import namedtuple
 from contextlib import suppress
 import csv
 import datetime as dt
@@ -10,6 +11,8 @@ import os.path
 BB_PER_BUYIN = 100
 BUY_INS = 30
 PATH = os.path.dirname(os.path.realpath(__file__))
+
+Record = namedtuple('Record', ['timestamp', 'balance'])
 
 
 class Manager(object):
@@ -83,11 +86,10 @@ class Manager(object):
 
 class Account(object):
 
-	def __init__(self, name, currency, balance, precision):
+	def __init__(self, name, currency, precision):
 		self.name = name
 		self.currency = currency
 		self.precision = precision
-		self._balance = self._cent(decimal.Decimal(balance))
 		self.history = list()
 		self.filename = os.path.join(PATH, self.name+'.csv')
 		with suppress(FileNotFoundError), \
@@ -98,24 +100,24 @@ class Account(object):
 					isotime[::-1].replace(':', '', 1)[::-1],
 					'%Y-%m-%dT%H:%M:%S%z')
 				balance = self._cent(decimal.Decimal(value))
-				self.history.append((timestamp, balance))
+				self.history.append(Record(timestamp, balance))
 
 	def __str__(self):
-		return '{}{:,}'.format(self.currency, self._balance)
+		return '{}{:,}'.format(self.currency, self.history[-1].balance)
 
 	@property
 	def balance(self):
-		return str(self._balance)
+		return str(self.history[-1].balance)
 
 	@balance.setter
 	def balance(self, value):
 		logging.info('{}: new balance {}'.format(self.name, value))
-		self._balance = self._parse(value)
-		self._save(self._balance)
+		new_balance = self._parse(value)
+		self._save(new_balance)
 
 	@property
 	def stakes(self):
-		sb = self._cent(self._balance / BUY_INS / BB_PER_BUYIN / 2)
+		sb = self._cent(self.history[-1].balance / BUY_INS / BB_PER_BUYIN / 2)
 		bb = sb * 2
 		buy_in = bb * BB_PER_BUYIN
 		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
@@ -125,13 +127,12 @@ class Account(object):
 	def state(self):
 		return {
 			'currency': self.currency,
-			'balance': str(self._balance),
 			'precision': self.precision}
 
 	def transaction(self, value):
 		logging.info('{}: transaction {}'.format(self.name, value))
-		self._balance += self._parse(value)
-		self._save(self._balance)
+		new_balance = self.history[-1].balance + self._parse(value)
+		self._save(new_balance)
 
 	def change(self, timedelta):
 		start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
@@ -139,7 +140,7 @@ class Account(object):
 			before = value
 			if timestamp < start:
 				break
-		delta = self._balance - before
+		delta = self.history[-1].balance - before
 		if before and delta:
 			percent = 100 * float(delta) / float(before)
 			percent = ' ({:.2f}%)'.format(abs(percent))
@@ -151,7 +152,7 @@ class Account(object):
 	def _save(self, balance):
 		now = dt.datetime.now(tz=dt.timezone.utc)
 		now = now.replace(microsecond=0)
-		self.history.append((now, balance))
+		self.history.append(Record(now, balance))
 		row = now.isoformat(), str(balance)
 		with open(self.filename, 'a', newline='') as file:
 			writer = csv.writer(file)
