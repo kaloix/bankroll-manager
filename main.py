@@ -1,52 +1,87 @@
 #!/usr/bin/env python3
 
-import functools
 import logging
 import os.path
-import tkinter as tk
-import tkinter.font as tkf
+import sys
+
+from PyQt5.QtWidgets import QApplication, QComboBox, QGridLayout, QLabel, \
+	QLineEdit, QVBoxLayout, QWidget
+from PyQt5.QtGui import QIcon
 
 import account
 
 
+PATH = os.path.dirname(os.path.realpath(__file__))
+STYLE = {'green': 'color : DarkGreen;',
+         'red': 'color : DarkRed;',
+         'default': 'color : ;'}
+
+
 def main():
-	logging.basicConfig(format='[%(levelname)s] %(message)s',
-	                    level=logging.DEBUG)
-	root = tk.Tk(className='Bankroll')
-	root.title('Poker Bankroll Manager')
-	path = os.path.dirname(os.path.realpath(__file__))
-	img = tk.PhotoImage(file=os.path.join(path, 'icon.png'))
-	root.tk.call('wm', 'iconphoto', root._w, img)
-	app = Application(root)
-	app.mainloop()
+	logging.basicConfig(
+		format='[%(asctime)s|%(levelname)s|%(module)s] %(message)s',
+		datefmt='%H:%M:%S', level=logging.DEBUG)
+	app = QApplication(sys.argv)
+	easy_test = Application()
+	sys.exit(app.exec_())
 
 
-class Application(tk.Frame):
+class BankrollManager(QWidget):
 
-	def __init__(self, master):
-		tk.Frame.__init__(self, master)
-		self.font = tkf.nametofont('TkDefaultFont')
-		self.font.configure(size=11)
-		self.pack(padx=10, pady=10)
+	def __init__(self):
+		super().__init__()
+		self.setWindowTitle('Poker Bankroll Manager')
+		self.setWindowIcon(QIcon(os.path.join(PATH, 'icon.png')))
 		self.widget = dict()
-		self.label = dict()
-		self.row = int()
-		self.manager = account.Manager()
-		self.createWidgets()
-		self.load()
+		self.create_widgets()
+		self.show()
 
-	def createWidgets(self):
-		self.add_dropdown('Account')
-		self.set_options('Account', self.manager.listing, self.select)
+	def create_widgets(self):
+		self.layout = QGridLayout()
+		self.setLayout(self.layout)
+		self.row_elems = int()
+		self.add_combo('Account')
+		self.add_edit('New Balance')
 		self.add_label('Balance')
 		self.add_label('Stakes')
-		self.add_entry('Transaction', self.transaction)
-		self.add_entry('New Balance', self.set_balance)
 		self.add_label('Last Hour')
 		self.add_label('Last Day')
 		self.add_label('Last Week')
 		self.add_label('Last Month')
 		self.add_label('Last Year')
+
+	def add_label(self, text):
+		self.widget[text] = elem = QLabel('–', self)
+		self.add_element(text, elem)
+
+	def add_combo(self, text):
+		self.widget[text] = elem = QComboBox(self)
+		self.add_element(text, elem)
+
+	def add_edit(self, text):
+		self.widget[text] = elem = QLineEdit('', self)
+		self.add_element(text, elem)
+
+	def add_element(self, text, elem):
+		name = QLabel(text+':', self)
+		self.layout.addWidget(name, self.row_elems, 0)
+		self.layout.addWidget(elem, self.row_elems, 1)
+		self.row_elems += 1
+
+
+class Application(BankrollManager):
+
+	def __init__(self):
+		super().__init__()
+		self.manager = account.Manager()
+		self.connect_methods()
+		self.load()
+
+	def connect_methods(self):
+		self.widget['Account'].clear()
+		self.widget['Account'].addItems(self.manager.listing)
+		self.widget['Account'].currentTextChanged.connect(self.select)
+		self.widget['New Balance'].returnPressed.connect(self.set_balance)
 
 	def select(self, account):
 		self.manager.selected = account
@@ -54,78 +89,32 @@ class Application(tk.Frame):
 
 	def load(self):
 		account = self.manager.selected
-		self.set_label('Account', account)
-		self.set_label('Balance', self.manager.balance)
-		self.set_label('Stakes', self.manager.stakes)
+		self.widget['Account'].setCurrentText(account)
+		self.widget['Balance'].setText(self.manager.balance)
+		self.widget['Stakes'].setText(self.manager.stakes)
 		for period in ['hour', 'day', 'week', 'month', 'year']:
 			key = 'Last ' + period.capitalize()
 			change = self.manager.change(period)
 			if change[0] == '+':
-				color = 'dark green'
+				color = 'green'
 			elif change[0] == '–':
-				color = 'dark red'
+				color = 'red'
 			else:
-				color = 'black'
-			self.set_label(key, change, color)
+				color = 'default'
+			self.widget[key].setText(change)
+			self.widget[key].setStyleSheet(STYLE[color])
+		self.widget['New Balance'].setFocus()
+		self.setFixedSize(self.sizeHint())
 
-	def transaction(self, _):
-		value = self.get_label('Transaction')
-		try:
-			self.manager.transaction(value)
-		except ValueError as err:
-			logging.warning('{}: {}'.format(type(err).__name__, err))
-			return
-		self.set_label('Transaction', '')
-		self.load()
-
-	def set_balance(self, _):
-		value = self.get_label('New Balance')
+	def set_balance(self):
+		value = self.widget['New Balance'].text()
 		try:
 			self.manager.balance = value
 		except ValueError as err:
 			logging.warning('{}: {}'.format(type(err).__name__, err))
 			return
-		self.set_label('New Balance', '')
+		self.widget['New Balance'].clear()
 		self.load()
-
-	def add_label(self, text):
-		self.label[text] = tk.StringVar()
-		l = tk.Label(self, textvariable=self.label[text])
-		self.add_element(text, l)
-
-	def add_entry(self, text, cmd):
-		self.label[text] = tk.StringVar()
-		e = tk.Entry(self, textvariable=self.label[text], font=self.font)
-		e.bind('<Return>', cmd)
-		self.add_element(text, e)
-
-	def add_dropdown(self, text):
-		self.label[text] = tk.StringVar()
-		o = tk.OptionMenu(self, self.label[text], ' ')
-		o['menu'].config(font=self.font)
-		self.add_element(text, o)
-
-	def set_options(self, key, choices, cmd):
-		self.label[key].set(' ')
-		self.widget[key]['menu'].delete(0, 'end')
-		for choice in choices:
-			command = functools.partial(cmd, choice)
-			self.widget[key]['menu'].add_command(label=choice, command=command)
-
-	def add_element(self, text, elem):
-		l = tk.Label(self, text=text+':')
-		l.grid(row=self.row, column=0, sticky='E', padx=5, pady=5)
-		elem.grid(row=self.row, column=1, sticky='W', padx=5, pady=5)
-		self.row += 1
-		self.widget[text] = elem
-
-	def set_label(self, key, new, color=None):
-		self.label[key].set(new)
-		if color:
-			self.widget[key]['foreground'] = color
-
-	def get_label(self, key):
-		return self.label[key].get()
 
 
 if __name__ == '__main__':
