@@ -117,8 +117,7 @@ class Account(object):
 
 	@property
 	def stakes(self):
-		modifier = decimal.Decimal(self.modifier)
-		sb = self._cent(modifier * self.history[-1].balance / self.buy_ins /
+		sb = self._cent(self.history[-1].balance / self.buy_ins /
 		                BB_PER_BUYIN / 2)
 		bb = sb * 2
 		buy_in = bb * BB_PER_BUYIN
@@ -139,7 +138,10 @@ class Account(object):
 
 	def change(self, timedelta):
 		start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
-		before = self._get_balance(start)
+		for timestamp, value in reversed(self.history):
+			before = value
+			if timestamp < start:
+				break
 		delta = self.history[-1].balance - before
 		if before and delta:
 			percent = 100 * float(delta) / float(before)
@@ -157,21 +159,6 @@ class Account(object):
 		with open(self.filename, 'a', newline='') as file:
 			writer = csv.writer(file)
 			writer.writerow(row)
-	@property
-	def modifier(self):
-		start = dt.datetime.now(tz=dt.timezone.utc) - dt.timedelta(hours=6)
-		before = self._get_balance(start)
-		delta = self.history[-1].balance - before
-		change = float(delta) / float(before)
-		max_loss = 0.2
-		return max(0, min(1, 1+change/max_loss))
-
-	def _get_balance(self, timestamp):
-		for timestamp_, value in reversed(self.history):
-			balance = value
-			if timestamp_ < timestamp:
-				break
-		return balance
 
 	def _cent(self, value):
 		exp = decimal.Decimal(str(10 ** -self.precision))
