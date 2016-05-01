@@ -35,6 +35,7 @@ class Manager(object):
 
 	@selected.setter
 	def selected(self, name):
+		logging.info('select {}'.format(name))
 		self._selected = name
 		self._save()
 
@@ -73,6 +74,7 @@ class Manager(object):
 			return account.change(dt.timedelta(days=365.2))
 
 	def _save(self):
+		logging.debug('save state')
 		accounts = {name: account.state
 		            for name, account in self.accounts.items()}
 		state = {
@@ -111,7 +113,7 @@ class Account(object):
 
 	@balance.setter
 	def balance(self, value):
-		logging.info('{}: new balance {}'.format(self.name, value))
+		logging.info('{}: set balance {}'.format(self.name, value))
 		new_balance = self._parse(value)
 		self._save(new_balance)
 

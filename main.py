@@ -20,7 +20,7 @@ STYLE = {'green': 'color : DarkGreen;',
 def main():
 	logging.basicConfig(
 		format='[%(asctime)s|%(levelname)s|%(module)s] %(message)s',
-		datefmt='%H:%M:%S', level=logging.DEBUG)
+		datefmt='%H:%M:%S', level=logging.INFO)
 	app = QApplication(sys.argv)
 	easy_test = Application()
 	sys.exit(app.exec_())
@@ -74,12 +74,15 @@ class Application(BankrollManager):
 	def __init__(self):
 		super().__init__()
 		self.manager = account.Manager()
-		self.connect_methods()
+		self.fill_combos()
 		self.load()
+		self.connect_methods()
 
-	def connect_methods(self):
+	def fill_combos(self):
 		self.widget['Account'].clear()
 		self.widget['Account'].addItems(self.manager.listing)
+
+	def connect_methods(self):
 		self.widget['Account'].currentTextChanged.connect(self.select)
 		self.widget['New Balance'].returnPressed.connect(self.set_balance)
 
@@ -89,6 +92,7 @@ class Application(BankrollManager):
 
 	def load(self):
 		account = self.manager.selected
+		logging.debug('load {}'.format(account))
 		self.widget['Account'].setCurrentText(account)
 		self.widget['Balance'].setText(self.manager.balance)
 		self.widget['Stakes'].setText(self.manager.stakes)
