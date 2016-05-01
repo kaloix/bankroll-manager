@@ -9,7 +9,7 @@
 * Custom decimal place precision per account
 * Custom currency unit per account
 * Calculation of maximum buy-in based on total balance
-* View blance change for various periods
+* View balance change for various periods
 * Saves balance history in CSV file
 
 ## Acknowledgements
