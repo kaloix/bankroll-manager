@@ -51,7 +51,7 @@ class BankrollManager(QWidget):
 		self.add_label('Last Year')
 
 	def add_label(self, text):
-		self.widget[text] = elem = QLabel('–', self)
+		self.widget[text] = elem = QLabel(self)
 		self.add_element(text, elem)
 
 	def add_combo(self, text):
@@ -59,7 +59,7 @@ class BankrollManager(QWidget):
 		self.add_element(text, elem)
 
 	def add_edit(self, text):
-		self.widget[text] = elem = QLineEdit('', self)
+		self.widget[text] = elem = QLineEdit(self)
 		self.add_element(text, elem)
 
 	def add_element(self, text, elem):

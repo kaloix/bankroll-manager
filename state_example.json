@@ -1,0 +1,15 @@
+{
+	"accounts": {
+		"Test 1": {
+			"buy_ins": 30,
+			"currency": "$",
+			"precision": 2
+		},
+		"Test 2": {
+			"buy_ins": 10,
+			"currency": "",
+			"precision": 0
+		}
+	},
+	"selected": "Test 1"
+}
