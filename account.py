@@ -27,7 +27,7 @@ class Manager(object):
 
 	@property
 	def listing(self):
-		return sorted(list(self.accounts))
+		return sorted(self.accounts)
 
 	@property
 	def selected(self):
@@ -72,9 +72,8 @@ class Manager(object):
 		logging.debug('save state')
 		accounts = {name: account.state
 		            for name, account in self.accounts.items()}
-		state = {
-			'accounts': accounts,
-			'selected': self.selected}
+		state = {'accounts': accounts,
+		         'selected': self.selected}
 		account_json = json.dumps(state, sort_keys=True, indent='\t')
 		with open(self.filename, 'w') as file:
 			file.write(account_json)
