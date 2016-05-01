@@ -71,15 +71,8 @@ class Application(BankrollManager):
     def __init__(self):
         super().__init__()
         self.manager = account.Manager()
-        self.fill_combos()
-        self.load()
-        self.connect_methods()
-
-    def fill_combos(self):
-        self.widget['Account'].clear()
         self.widget['Account'].addItems(self.manager.listing)
-
-    def connect_methods(self):
+        self.load()
         self.widget['Account'].currentTextChanged.connect(self.select)
         self.widget['New Balance'].returnPressed.connect(self.set_balance)
 

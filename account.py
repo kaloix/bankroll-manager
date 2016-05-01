@@ -1,11 +1,11 @@
-from collections import namedtuple
-from contextlib import suppress
 import csv
 import datetime as dt
 import decimal
 import json
 import logging
 import os.path
+from collections import namedtuple
+from contextlib import suppress
 
 BB_PER_BUYIN = 100
 PATH = os.path.dirname(os.path.realpath(__file__))
