@@ -42,7 +42,7 @@ class Manager(object):
 	@property
 	def balance(self):
 		account = self.accounts[self._selected]
-		return str(account)
+		return account.balance
 
 	@balance.setter
 	def balance(self, value):
@@ -104,12 +104,11 @@ class Account(object):
 				balance = self._cent(decimal.Decimal(value))
 				self.history.append(Record(timestamp, balance))
 
-	def __str__(self):
-		return '{}{:,}'.format(self.currency, self.history[-1].balance)
-
 	@property
 	def balance(self):
-		return str(self.history[-1].balance)
+		if not self.history:
+			return '—'
+		return '{}{:,}'.format(self.currency, self.history[-1].balance)
 
 	@balance.setter
 	def balance(self, value):
@@ -119,6 +118,8 @@ class Account(object):
 
 	@property
 	def stakes(self):
+		if not self.history:
+			return '—'
 		sb = self._cent(self.history[-1].balance / self.buy_ins /
 		                BB_PER_BUYIN / 2)
 		bb = sb * 2
@@ -139,6 +140,8 @@ class Account(object):
 		self._save(new_balance)
 
 	def change(self, timedelta):
+		if not self.history:
+			return '—'
 		start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
 		for timestamp, value in reversed(self.history):
 			before = value
