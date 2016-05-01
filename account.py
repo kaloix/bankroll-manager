@@ -55,11 +55,6 @@ class Manager(object):
 		account = self.accounts[self._selected]
 		return account.stakes
 
-	def transaction(self, value):
-		account = self.accounts[self._selected]
-		account.transaction(value)
-		self._save()
-
 	def change(self, period):
 		account = self.accounts[self._selected]
 		if period == 'hour':
@@ -105,6 +100,12 @@ class Account(object):
 				self.history.append(Record(timestamp, balance))
 
 	@property
+	def state(self):
+		return {'currency': self.currency,
+		        'precision': self.precision,
+		        'buy_ins': self.buy_ins}
+
+	@property
 	def balance(self):
 		if not self.history:
 			return '—'
@@ -126,18 +127,6 @@ class Account(object):
 		buy_in = bb * BB_PER_BUYIN
 		return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
 			self.currency, sb, bb, buy_in)
-
-	@property
-	def state(self):
-		return {
-			'currency': self.currency,
-			'precision': self.precision,
-			'buy_ins': self.buy_ins}
-
-	def transaction(self, value):
-		logging.info('{}: transaction {}'.format(self.name, value))
-		new_balance = self.history[-1].balance + self._parse(value)
-		self._save(new_balance)
 
 	def change(self, timedelta):
 		if not self.history:
