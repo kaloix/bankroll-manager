@@ -4,16 +4,14 @@ import logging
 import os.path
 import sys
 
-from PyQt5.QtWidgets import QApplication, QComboBox, QGridLayout, QLabel, \
-    QLineEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (QApplication, QComboBox, QGridLayout, QLabel,
+                             QLineEdit, QWidget)
 from PyQt5.QtGui import QIcon
 
 import account
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-STYLE = {'green': 'color : DarkGreen;',
-         'red': 'color : DarkRed;',
-         'default': 'color : ;'}
+ICONPATH = os.path.join(PATH, 'icon.png')
 
 
 def main():
@@ -29,14 +27,14 @@ class BankrollManager(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Poker Bankroll Manager')
-        self.setWindowIcon(QIcon(os.path.join(PATH, 'icon.png')))
-        self.widget = dict()
+        self.setWindowIcon(QIcon(ICONPATH))
         self.create_widgets()
         self.show()
 
     def create_widgets(self):
         self.layout = QGridLayout()
         self.setLayout(self.layout)
+        self.widget = dict()
         self.row_elems = int()
         self.add_combo('Account')
         self.add_edit('New Balance')
@@ -90,13 +88,13 @@ class Application(BankrollManager):
             key = 'Last ' + period.capitalize()
             change = self.manager.change(period)
             if change[0] == '+':
-                color = 'green'
+                style = 'color : DarkGreen;'
             elif change[0] == '–':
-                color = 'red'
+                style = 'color : DarkRed;'
             else:
-                color = 'default'
+                style = 'color : ;'
             self.widget[key].setText(change)
-            self.widget[key].setStyleSheet(STYLE[color])
+            self.widget[key].setStyleSheet(style)
         self.widget['New Balance'].setFocus()
         self.setFixedSize(self.sizeHint())
 
