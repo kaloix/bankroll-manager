@@ -8,19 +8,19 @@ from collections import namedtuple
 from contextlib import suppress
 
 BB_PER_BUYIN = 100
-PATH = os.path.dirname(os.path.realpath(__file__))
 
 Record = namedtuple('Record', ['timestamp', 'balance'])
 
 
 class Manager(object):
-    def __init__(self):
-        self.filename = os.path.join(PATH, 'state.json')
-        with open(self.filename) as file:
+    def __init__(self, data_directory):
+        self.account_config = os.path.join(data_directory, 'accounts.json')
+        with open(self.account_config) as file:
             state = json.loads(file.read())
         self.accounts = dict()
         for name, attr in state['accounts'].items():
-            self.accounts[name] = Account(name=name, **attr)
+            history_file = os.path.join(data_directory, '{}.csv'.format(name))
+            self.accounts[name] = Account(history_file, **attr)
         self._selected = state['selected']
 
     @property
@@ -39,22 +39,23 @@ class Manager(object):
 
     @property
     def balance(self):
-        account = self.accounts[self._selected]
+        account = self.accounts[self.selected]
         return account.balance
 
     @balance.setter
     def balance(self, value):
-        account = self.accounts[self._selected]
+        logging.info('{}: set balance {}'.format(self.selected, value))
+        account = self.accounts[self.selected]
         account.balance = value
         self._save()
 
     @property
     def stakes(self):
-        account = self.accounts[self._selected]
+        account = self.accounts[self.selected]
         return account.stakes
 
     def change(self, period):
-        account = self.accounts[self._selected]
+        account = self.accounts[self.selected]
         if period == 'hour':
             return account.change(dt.timedelta(hours=1))
         if period == 'day':
@@ -72,21 +73,20 @@ class Manager(object):
                     for name, account in self.accounts.items()}
         state = {'accounts': accounts,
                  'selected': self.selected}
-        account_json = json.dumps(state, sort_keys=True, indent='\t')
-        with open(self.filename, 'w') as file:
+        account_json = json.dumps(state, sort_keys=True, indent='  ')
+        with open(self.account_config, 'w') as file:
             file.write(account_json)
 
 
 class Account(object):
-    def __init__(self, name, currency, precision, buy_ins):
-        self.name = name
+    def __init__(self, history_file, currency, precision, buy_ins):
+        self.history_file = history_file
         self.currency = currency
         self.precision = precision
         self.buy_ins = buy_ins
         self.history = list()
-        self.filename = os.path.join(PATH, self.name + '.csv')
         with suppress(FileNotFoundError), \
-             open(self.filename, newline='') as file:
+             open(self.history_file, newline='') as file:
             reader = csv.reader(file)
             for isotime, value in reader:
                 timestamp = dt.datetime.strptime(
@@ -109,7 +109,6 @@ class Account(object):
 
     @balance.setter
     def balance(self, value):
-        logging.info('{}: set balance {}'.format(self.name, value))
         new_balance = self._parse(value)
         self._save(new_balance)
 
@@ -146,7 +145,7 @@ class Account(object):
         now = now.replace(microsecond=0)
         self.history.append(Record(now, balance))
         row = now.isoformat(), str(balance)
-        with open(self.filename, 'a', newline='') as file:
+        with open(self.history_file, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(row)
 

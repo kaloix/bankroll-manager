@@ -3,31 +3,35 @@
 import logging
 import os.path
 import sys
+from configparser import ConfigParser
 
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QComboBox, QGridLayout, QLabel,
                              QLineEdit, QWidget)
-from PyQt5.QtGui import QIcon
 
 import account
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-ICONPATH = os.path.join(PATH, 'icon.png')
+ICON_PATH = os.path.join(PATH, 'icon.png')
+CONFIG_PATH = os.path.join(PATH, 'config.ini')
 
 
 def main():
     logging.basicConfig(
         format='[%(asctime)s|%(levelname)s|%(module)s] %(message)s',
         datefmt='%H:%M:%S', level=logging.INFO)
+    config = ConfigParser()
+    config.read(CONFIG_PATH)
     app = QApplication(sys.argv)
-    easy_test = Application()
+    bankroll_manager = BankrollManager(config['location']['data_directory'])
     sys.exit(app.exec_())
 
 
-class BankrollManager(QWidget):
+class Application(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Poker Bankroll Manager')
-        self.setWindowIcon(QIcon(ICONPATH))
+        self.setWindowIcon(QIcon(ICON_PATH))
         self.create_widgets()
         self.show()
 
@@ -65,10 +69,10 @@ class BankrollManager(QWidget):
         self.row_elems += 1
 
 
-class Application(BankrollManager):
-    def __init__(self):
+class BankrollManager(Application):
+    def __init__(self, data_directory):
         super().__init__()
-        self.manager = account.Manager()
+        self.manager = account.Manager(data_directory)
         self.widget['Account'].addItems(self.manager.listing)
         self.load()
         self.widget['Account'].currentTextChanged.connect(self.select)

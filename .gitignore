@@ -1,5 +1,2 @@
-*.csv
 .idea
 __pycache__
-state.json
-test.py
