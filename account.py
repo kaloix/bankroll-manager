@@ -20,7 +20,7 @@ class Manager(object):
         self.accounts = dict()
         for name, attr in state['accounts'].items():
             history_file = os.path.join(data_directory, '{}.csv'.format(name))
-            self.accounts[name] = Account(history_file, **attr)
+            self.accounts[name] = Account(history_file, name, **attr)
         self._selected = state['selected']
 
     @property
@@ -29,71 +29,33 @@ class Manager(object):
 
     @property
     def selected(self):
-        return self._selected
+        return self.accounts[self._selected]
 
-    @selected.setter
-    def selected(self, name):
+    def select(self, name):
         logging.info('select {}'.format(name))
         self._selected = name
         self._save()
-
-    @property
-    def balance(self):
-        account = self.accounts[self.selected]
-        return account.balance
-
-    @balance.setter
-    def balance(self, value):
-        logging.info('{}: set balance {}'.format(self.selected, value))
-        account = self.accounts[self.selected]
-        account.balance = value
-        self._save()
-
-    @property
-    def stakes(self):
-        account = self.accounts[self.selected]
-        return account.stakes
-
-    def change(self, period):
-        account = self.accounts[self.selected]
-        if period == 'hour':
-            return account.change(dt.timedelta(hours=1))
-        if period == 'day':
-            return account.change(dt.timedelta(days=1))
-        if period == 'week':
-            return account.change(dt.timedelta(days=7))
-        if period == 'month':
-            return account.change(dt.timedelta(days=30.44))
-        if period == 'year':
-            return account.change(dt.timedelta(days=365.2))
 
     def _save(self):
         logging.debug('save state')
         accounts = {name: account.state
                     for name, account in self.accounts.items()}
         state = {'accounts': accounts,
-                 'selected': self.selected}
+                 'selected': self._selected}
         account_json = json.dumps(state, sort_keys=True, indent='  ')
         with open(self.account_config, 'w') as file:
             file.write(account_json)
 
 
 class Account(object):
-    def __init__(self, history_file, currency, precision, buy_ins):
+    def __init__(self, history_file, name, currency, precision, buy_ins):
         self.history_file = history_file
+        self.name = name
         self.currency = currency
         self.precision = precision
         self.buy_ins = buy_ins
         self.history = list()
-        with suppress(FileNotFoundError), \
-             open(self.history_file, newline='') as file:
-            reader = csv.reader(file)
-            for isotime, value in reader:
-                timestamp = dt.datetime.strptime(
-                    isotime[::-1].replace(':', '', 1)[::-1],
-                    '%Y-%m-%dT%H:%M:%S%z')
-                balance = self._cent(decimal.Decimal(value))
-                self.history.append(Record(timestamp, balance))
+        self._load()
 
     @property
     def state(self):
@@ -109,6 +71,7 @@ class Account(object):
 
     @balance.setter
     def balance(self, value):
+        logging.info('{}: set balance {}'.format(self.name, value))
         new_balance = self._parse(value)
         self._save(new_balance)
 
@@ -123,9 +86,21 @@ class Account(object):
         return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
             self.currency, sb, bb, buy_in)
 
-    def change(self, timedelta):
+    def change(self, period):
         if not self.history:
             return '—'
+        if period == 'hour':
+            timedelta = dt.timedelta(hours=1)
+        elif period == 'day':
+            timedelta = dt.timedelta(days=1)
+        elif period == 'week':
+            timedelta = dt.timedelta(days=7)
+        elif period == 'month':
+            timedelta = dt.timedelta(days=30.44)
+        elif period == 'year':
+            timedelta = dt.timedelta(days=365.2)
+        else:
+            ValueError('unknown period')
         start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
         for timestamp, value in reversed(self.history):
             before = value
@@ -139,6 +114,17 @@ class Account(object):
             percent = str()
         sign = '' if not delta else '– ' if delta.is_signed() else '+ '
         return '{}{}{:,}{}'.format(sign, self.currency, abs(delta), percent)
+
+    def _load(self):
+        with suppress(FileNotFoundError), \
+             open(self.history_file, newline='') as file:
+            reader = csv.reader(file)
+            for isotime, value in reader:
+                timestamp = dt.datetime.strptime(
+                    isotime[::-1].replace(':', '', 1)[::-1],
+                    '%Y-%m-%dT%H:%M:%S%z')
+                balance = self._cent(decimal.Decimal(value))
+                self.history.append(Record(timestamp, balance))
 
     def _save(self, balance):
         now = dt.datetime.now(tz=dt.timezone.utc)
@@ -158,7 +144,4 @@ class Account(object):
             value = decimal.Decimal(value)
         except decimal.InvalidOperation as err:
             raise ValueError('parsing error') from err
-        rounded = self._cent(value)
-        if rounded != value:
-            raise ValueError('precision too high')
-        return rounded
+        return self._cent(value)
