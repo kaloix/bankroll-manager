@@ -4,6 +4,7 @@ import logging
 import os.path
 import string
 import sys
+import datetime
 from configparser import ConfigParser
 
 from PyQt5.QtGui import QIcon
@@ -15,6 +16,11 @@ import account
 PATH = os.path.dirname(os.path.realpath(__file__))
 ICON_PATH = os.path.join(PATH, 'icon.png')
 CONFIG_PATH = os.path.join(PATH, 'config.ini')
+PERIODS = [('Last Hour', datetime.timedelta(hours=1)),
+           ('Last Day', datetime.timedelta(days=1)),
+           ('Last Week', datetime.timedelta(days=7)),
+           ('Last Month', datetime.timedelta(days=30.44)),
+           ('Last Year', datetime.timedelta(days=365.2))]
 
 
 def main():
@@ -45,11 +51,8 @@ class Application(QWidget):
         self.add_edit('New Balance')
         self.add_label('Balance')
         self.add_label('Stakes')
-        self.add_label('Last Hour')
-        self.add_label('Last Day')
-        self.add_label('Last Week')
-        self.add_label('Last Month')
-        self.add_label('Last Year')
+        for key, _ in PERIODS:
+            self.add_label(key)
 
     def add_label(self, text):
         self.widget[text] = elem = QLabel(self)
@@ -73,26 +76,25 @@ class Application(QWidget):
 class BankrollManager(Application):
     def __init__(self, data_directory):
         super().__init__()
-        self.manager = account.Manager(data_directory)
-        self.widget['Account'].addItems(self.manager.listing)
+        self.accountant = account.Accountant(data_directory)
+        self.widget['Account'].addItems(self.accountant.listing)
         self.load()
         self.widget['Account'].currentTextChanged.connect(self.select)
         self.widget['New Balance'].textEdited.connect(self.pretty_balance)
         self.widget['New Balance'].returnPressed.connect(self.set_balance)
 
-    def select(self, account):
-        self.manager.select(account)
+    def select(self, account_name):
+        self.accountant.select_account(account_name)
         self.load()
 
     def load(self):
-        account = self.manager.selected
-        logging.debug('load {}'.format(account.name))
-        self.widget['Account'].setCurrentText(account.name)
-        self.widget['Balance'].setText(account.balance)
-        self.widget['Stakes'].setText(account.stakes)
-        for period in ['hour', 'day', 'week', 'month', 'year']:
-            key = 'Last ' + period.capitalize()
-            change = account.change(period)
+        selected = self.accountant.selected_account
+        logging.debug('load {}'.format(selected.name))
+        self.widget['Account'].setCurrentText(selected.name)
+        self.widget['Balance'].setText(selected.balance)
+        self.widget['Stakes'].setText(selected.stakes)
+        for key, timedelta in PERIODS:
+            change = selected.change(timedelta)
             if change[0] == '+':
                 style = 'color : DarkGreen;'
             elif change[0] == '–':
@@ -113,11 +115,10 @@ class BankrollManager(Application):
         self.widget['New Balance'].setText(pretty_text)
 
     def set_balance(self):
-        account = self.manager.selected
         value = self.widget['New Balance'].text()
         value = ''.join(char for char in value if char != ',')
         try:
-            account.balance = value
+            self.accountant.selected_account.balance = value
         except ValueError as err:
             logging.warning('{}: {}'.format(type(err).__name__, err))
             return

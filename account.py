@@ -12,7 +12,7 @@ BB_PER_BUYIN = 100
 Record = namedtuple('Record', ['timestamp', 'balance'])
 
 
-class Manager(object):
+class Accountant(object):
     def __init__(self, data_directory):
         self.account_config = os.path.join(data_directory, 'accounts.json')
         with open(self.account_config) as file:
@@ -28,10 +28,10 @@ class Manager(object):
         return sorted(self.accounts)
 
     @property
-    def selected(self):
+    def selected_account(self):
         return self.accounts[self._selected]
 
-    def select(self, name):
+    def select_account(self, name):
         logging.info('select {}'.format(name))
         self._selected = name
         self._save()
@@ -86,21 +86,9 @@ class Account(object):
         return '{0}{1:,} / {0}{2:,} / {0}{3:,}'.format(
             self.currency, sb, bb, buy_in)
 
-    def change(self, period):
+    def change(self, timedelta):
         if not self.history:
             return '—'
-        if period == 'hour':
-            timedelta = dt.timedelta(hours=1)
-        elif period == 'day':
-            timedelta = dt.timedelta(days=1)
-        elif period == 'week':
-            timedelta = dt.timedelta(days=7)
-        elif period == 'month':
-            timedelta = dt.timedelta(days=30.44)
-        elif period == 'year':
-            timedelta = dt.timedelta(days=365.2)
-        else:
-            ValueError('unknown period')
         start = dt.datetime.now(tz=dt.timezone.utc) - timedelta
         for timestamp, value in reversed(self.history):
             before = value
