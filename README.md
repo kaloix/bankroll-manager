@@ -10,11 +10,17 @@
 * Store data in custom directory
 
 ## Dependencies
-* [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro)
+* [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) (GPLv3
+  license)
 
 ## Installation and Usage
-1. Set the `data_directory` in the file `config.ini`. It will be used to load
-   the account configuration and store balance histories of all accounts.
+1. Create the file `config.ini` in the module's folder from the following
+   template and set the `data_directory` parameter. This directory will be used
+   to load the account configuration and store balance histories of all
+   accounts.
+
+		[location]
+		data_directory = /path/to/user/data
 
 2. Configure your accounts by creating the file `accounts.json` in the
    `data_directory`. Use the following template:
