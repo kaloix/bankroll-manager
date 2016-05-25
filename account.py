@@ -8,6 +8,8 @@ from collections import namedtuple
 from contextlib import suppress
 
 BB_PER_BUYIN = 100
+EN_DASH = '–'
+THIN_SPACE = ' '
 
 Record = namedtuple('Record', ['timestamp', 'balance'])
 
@@ -36,6 +38,7 @@ class Accountant(object):
         self._selected = name
         self._save()
 
+    # FIXME seperate account config from state storage (self._selected)
     def _save(self):
         logging.debug('save state')
         accounts = {name: account.state
@@ -97,10 +100,13 @@ class Account(object):
         delta = self.history[-1].balance - before
         if before and delta:
             percent = 100 * float(delta) / float(before)
-            percent = ' ({:.0f}%)'.format(abs(percent))
+            percent = ' ({:,.0f}{}%)'.format(abs(percent), THIN_SPACE)
         else:
             percent = str()
-        sign = '' if not delta else '– ' if delta.is_signed() else '+ '
+        if delta:
+            sign = EN_DASH + ' ' if delta.is_signed() else '+ '
+        else:
+            sign = ''
         return '{}{}{:,}{}'.format(sign, self.currency, abs(delta), percent)
 
     def _load(self):

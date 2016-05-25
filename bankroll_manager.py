@@ -21,6 +21,7 @@ PERIODS = [('Last Hour', datetime.timedelta(hours=1)),
            ('Last Week', datetime.timedelta(days=7)),
            ('Last Month', datetime.timedelta(days=30.44)),
            ('Last Year', datetime.timedelta(days=365.2))]
+EN_DASH = '–'
 
 
 def main():
@@ -97,7 +98,7 @@ class BankrollManager(Application):
             change = selected.change(timedelta)
             if change[0] == '+':
                 style = 'color : DarkGreen;'
-            elif change[0] == '–':
+            elif change[0] == EN_DASH:
                 style = 'color : DarkRed;'
             else:
                 style = 'color : ;'
