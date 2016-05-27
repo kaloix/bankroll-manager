@@ -10,7 +10,8 @@
 * Store data in custom directory
 
 ## Dependencies
-* [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) (GPLv3
+* [Python](https://www.python.org/) 3.4+ (BSD-style license)
+* [PyQt](https://www.riverbankcomputing.com/software/pyqt/intro) 5 (GPLv3
   license)
 
 ## Installation and Usage
