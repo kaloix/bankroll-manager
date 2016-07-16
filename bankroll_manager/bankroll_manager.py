@@ -7,13 +7,13 @@ import sys
 import datetime
 from configparser import ConfigParser
 
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QApplication, QComboBox, QGridLayout, QLabel,
-                             QLineEdit, QWidget)
+from PySide.QtGui import (QIcon, QApplication, QGridLayout, QLabel, QLineEdit,
+                          QWidget)
 
 import account
+from utility import QComboBox_
 
-PATH = os.path.dirname(os.path.realpath(__file__))
+PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 ICON_PATH = os.path.join(PATH, 'icon.png')
 CONFIG_PATH = os.path.join(PATH, 'config.ini')
 PERIODS = [('Last Hour', datetime.timedelta(hours=1)),
@@ -60,7 +60,7 @@ class Application(QWidget):
         self.add_element(text, elem)
 
     def add_combo(self, text):
-        self.widget[text] = elem = QComboBox(self)
+        self.widget[text] = elem = QComboBox_(self)
         self.add_element(text, elem)
 
     def add_edit(self, text):
