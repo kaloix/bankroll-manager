@@ -7,8 +7,9 @@ import sys
 import datetime
 from configparser import ConfigParser
 
-from PySide.QtGui import (QIcon, QApplication, QGridLayout, QLabel, QLineEdit,
-                          QWidget)
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QApplication, QGridLayout, QLabel, QLineEdit,
+                             QWidget)
 
 import account
 from utility import QComboBox_
